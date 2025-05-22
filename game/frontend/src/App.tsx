@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { HubConnectionBuilder, HubConnection, HttpTransportType } from '@microsoft/signalr';
+import { HubConnectionBuilder, HubConnection, LogLevel } from '@microsoft/signalr';
 import './App.css';
 
 // Types for player and ship
@@ -33,10 +33,8 @@ function App() {
   useEffect(() => {
     if (joined && !connectionRef.current) {
       const connection = new HubConnectionBuilder()
-        .withUrl('https://localhost:7224/gamehub', { // Updated port from launchSettings.json
-          skipNegotiation: true,
-          transport: HttpTransportType.WebSockets
-        })
+        .withUrl('https://localhost:7224/gamehub')
+        .configureLogging(LogLevel.Information)
         .withAutomaticReconnect()
         .build();
 

@@ -25,8 +25,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// Order matters - UseRouting first, then CORS, then endpoints
+app.UseRouting();
+app.UseCors();
 app.UseHttpsRedirection();
-app.UseCors(); // Enable CORS
 
 // SignalR hub endpoint
 app.MapHub<GameHub>("/gamehub");
