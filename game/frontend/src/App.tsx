@@ -107,12 +107,14 @@ function App() {
 
   useEffect(() => {
     // If all ships are placed and there are 2 players, and no turn event received, set first player's turn as fallback
-    if (allShipsPlaced && players.length === 2 && !isMyTurn && moves.length === 0 && opponentMoves.length === 0) {
+    if (allShipsPlaced && players.length === 2 && moves.length === 0 && opponentMoves.length === 0) {
       if (players[0]?.name === name) {
         setIsMyTurn(true);
+      } else if (players[1]?.name === name) {
+        setIsMyTurn(false);
       }
     }
-  }, [allShipsPlaced, players, name, isMyTurn, moves.length, opponentMoves.length]);
+  }, [allShipsPlaced, players, name, moves.length, opponentMoves.length]);
 
   // Handle join form submission
   const handleJoin = (e: React.FormEvent) => {
