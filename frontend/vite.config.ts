@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: '../backend/wwwroot',
+    outDir: 'dist', // Output to dist for Docker multi-stage copy
     emptyOutDir: true,
   },
 })
