@@ -13,6 +13,13 @@ interface Ship {
   size: number;
 }
 
+interface PlacedShip {
+  ship: Ship;
+  row: number;
+  col: number;
+  horizontal: boolean;
+}
+
 const SHIPS: Ship[] = [
   { id: 1, name: 'Carrier', size: 5 },
   { id: 2, name: 'Battleship', size: 4 },
@@ -28,6 +35,9 @@ function App() {
   const [joined, setJoined] = useState(false);
   const [players, setPlayers] = useState<Player[]>([]);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [selectedShip, setSelectedShip] = useState<Ship | null>(null);
+  const [placedShips, setPlacedShips] = useState<PlacedShip[]>([]);
+  const [isHorizontal, setIsHorizontal] = useState(true);
   const connectionRef = useRef<HubConnection | null>(null);
 
   useEffect(() => {
@@ -140,6 +150,41 @@ function App() {
   }
 
   // Render battleship grid and ships to place
+  const handleCellClick = (row: number, col: number) => {
+    if (!selectedShip) return;
+    // Check if ship fits and does not overlap
+    const positions = Array.from({ length: selectedShip.size }, (_, i) =>
+      isHorizontal ? [row, col + i] : [row + i, col]
+    );
+    if (
+      positions.some(
+        ([r, c]) =>
+          r < 0 || r >= GRID_SIZE || c < 0 || c >= GRID_SIZE ||
+          placedShips.some(ps => {
+            const psPositions = Array.from({ length: ps.ship.size }, (_, i) =>
+              ps.horizontal ? [ps.row, ps.col + i] : [ps.row + i, ps.col]
+            );
+            return psPositions.some(([pr, pc]) => pr === r && pc === c);
+          })
+        )
+    ) {
+      return; // Invalid placement
+    }
+    setPlacedShips([...placedShips, { ship: selectedShip, row, col, horizontal: isHorizontal }]);
+    setSelectedShip(null);
+  };
+
+  const isCellOccupied = (row: number, col: number) => {
+    return placedShips.some(ps => {
+      const psPositions = Array.from({ length: ps.ship.size }, (_, i) =>
+        ps.horizontal ? [ps.row, ps.col + i] : [ps.row + i, ps.col]
+      );
+      return psPositions.some(([pr, pc]) => pr === row && pc === col);
+    });
+  };
+
+  const shipsToPlace = SHIPS.filter(ship => !placedShips.some(ps => ps.ship.id === ship.id));
+
   return (
     <div className="game-container">
       <h2>Battleship: Place Your Ships</h2>
@@ -148,7 +193,12 @@ function App() {
           {Array.from({ length: GRID_SIZE }).map((_, row) => (
             <div className="battleship-row" key={row}>
               {Array.from({ length: GRID_SIZE }).map((_, col) => (
-                <div className="battleship-cell" key={col}></div>
+                <div
+                  className={`battleship-cell${isCellOccupied(row, col) ? ' occupied' : ''}${selectedShip ? ' placeable' : ''}`}
+                  key={col}
+                  onClick={() => handleCellClick(row, col)}
+                  style={{ cursor: selectedShip ? 'pointer' : 'default' }}
+                ></div>
               ))}
             </div>
           ))}
@@ -156,13 +206,21 @@ function App() {
         <div className="ships-to-place">
           <h3>Ships to Place</h3>
           <ul>
-            {SHIPS.map(ship => (
-              <li key={ship.id} className="ship-item">
+            {shipsToPlace.map(ship => (
+              <li
+                key={ship.id}
+                className={`ship-item${selectedShip?.id === ship.id ? ' selected' : ''}`}
+                onClick={() => setSelectedShip(ship)}
+                style={{ cursor: 'pointer' }}
+              >
                 <span className="ship-name">{ship.name}</span>
                 <span className="ship-size">{'■'.repeat(ship.size)}</span>
               </li>
             ))}
           </ul>
+          <button onClick={() => setIsHorizontal(h => !h)}>
+            Orientation: {isHorizontal ? 'Horizontal' : 'Vertical'}
+          </button>
         </div>
       </div>
     </div>
