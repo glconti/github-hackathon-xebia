@@ -39,9 +39,14 @@ function App() {
   const [placedShips, setPlacedShips] = useState<PlacedShip[]>([]);
   const [isHorizontal, setIsHorizontal] = useState(true);
   const [moves, setMoves] = useState<{ row: number; col: number }[]>([]);
-  const [isMyTurn, setIsMyTurn] = useState(false);
+  const [isMyTurn, setIsMyTurn] = useState(() => {
+    // If player is first in the list, assume they start (frontend fallback)
+    return false;
+  });
   const [opponentMoves, setOpponentMoves] = useState<{ row: number; col: number }[]>([]);
   const connectionRef = useRef<HubConnection | null>(null);
+
+  const allShipsPlaced = placedShips.length === SHIPS.length;
 
   useEffect(() => {
     if (joined && !connectionRef.current) {
@@ -99,6 +104,15 @@ function App() {
       }
     };
   }, [joined, name]);
+
+  useEffect(() => {
+    // If all ships are placed and there are 2 players, and no turn event received, set first player's turn as fallback
+    if (allShipsPlaced && players.length === 2 && !isMyTurn && moves.length === 0 && opponentMoves.length === 0) {
+      if (players[0]?.name === name) {
+        setIsMyTurn(true);
+      }
+    }
+  }, [allShipsPlaced, players, name, isMyTurn, moves.length, opponentMoves.length]);
 
   // Handle join form submission
   const handleJoin = (e: React.FormEvent) => {
@@ -160,9 +174,6 @@ function App() {
       </div>
     );
   }
-
-  // Track if all ships are placed and moves
-  const allShipsPlaced = placedShips.length === SHIPS.length;
 
   // Send move to backend
   const handleMove = (row: number, col: number) => {
