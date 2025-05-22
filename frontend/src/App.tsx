@@ -86,7 +86,7 @@ function App() {
   useEffect(() => {
     if (joined && !connectionRef.current) {
       const connection = new HubConnectionBuilder()
-        .withUrl('http://localhost:5062/gamehub')
+        .withUrl('http://localhost:5000/gamehub')
         .configureLogging(LogLevel.Information)
         .withAutomaticReconnect()
         .build();      // Connection event handlers

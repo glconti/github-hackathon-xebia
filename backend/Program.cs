@@ -29,7 +29,6 @@ if (app.Environment.IsDevelopment())
 // Order matters - UseRouting first, then CORS, then endpoints
 app.UseRouting();
 app.UseCors();
-app.UseHttpsRedirection();
 
 // Serve static files from wwwroot
 app.UseDefaultFiles();
