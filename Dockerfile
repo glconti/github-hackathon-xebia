@@ -16,7 +16,7 @@ COPY backend/*.csproj ./backend/
 RUN dotnet restore ./backend/backend.csproj
 COPY backend/. ./backend/
 COPY --from=frontend-build /app/frontend/dist ./backend/wwwroot
-RUN dotnet publish ./backend/backend.csproj -c Release -o out
+RUN dotnet publish ./backend/backend.csproj -c Release -o ./backend/out
 
 # 3. Runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
