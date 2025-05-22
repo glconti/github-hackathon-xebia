@@ -30,6 +30,10 @@ app.UseRouting();
 app.UseCors();
 app.UseHttpsRedirection();
 
+// Serve static files from wwwroot
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 // SignalR hub endpoint
 app.MapHub<GameHub>("/gamehub");
 
