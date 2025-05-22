@@ -126,6 +126,9 @@ public class GameHub : Hub
         Console.WriteLine($"Player {Context.ConnectionId} placed ship {shipId}. Total ships: {PlayerShips[Context.ConnectionId].Count}");
         await Clients.Caller.SendAsync("ShipPlaced", shipId);
         
+        // Broadcast updated player list with ship counts
+        await BroadcastPlayers();
+        
         // Check if both players have placed all their ships (5 ships per player)
         if (Players.Count == 2 && 
             PlayerShips.All(ps => ps.Value.Count == 5))
