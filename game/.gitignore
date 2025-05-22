@@ -1,0 +1,54 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.vs/
+*.vscode/
+*.dbmdl
+*.log
+*.pdb
+*.cache
+*.ide
+*.sdf
+*.opensdf
+*.VC.db
+*.DS_Store
+*.ncrunch*
+*.localhistory
+*.resharper*
+*.DotSettings.user
+*.dotCover
+TestResult*/
+
+# React
+node_modules/
+build/
+dist/
+.env
+.env.*
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+coverage/
+*.local
+*.cache
+*.next/
+.next/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Editor
+.idea/
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# Misc
+*.tgz

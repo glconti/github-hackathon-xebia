@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import './App.css'
+import { useState, useEffect, useRef } from 'react';
+import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
+import './App.css';
 
 // Types for player and ship
 interface Player {
@@ -25,7 +26,35 @@ const GRID_SIZE = 10;
 function App() {
   const [name, setName] = useState('');
   const [joined, setJoined] = useState(false);
-  const [players, setPlayers] = useState<Player[]>([]); // Simulate players for now
+  const [players, setPlayers] = useState<Player[]>([]);
+  const connectionRef = useRef<HubConnection | null>(null);
+
+  useEffect(() => {
+    if (joined && !connectionRef.current) {
+      const connection = new HubConnectionBuilder()
+        .withUrl('https://localhost:5001/gamehub') // Adjust port if needed
+        .withAutomaticReconnect()
+        .build();
+
+      connection.on('PlayerJoined', (playerName: string) => {
+        setPlayers(prev => {
+          if (prev.find(p => p.name === playerName)) return prev;
+          return [...prev, { name: playerName }];
+        });
+      });
+
+      connection.start().then(() => {
+        connection.invoke('JoinGame', name);
+      });
+
+      connectionRef.current = connection;
+    }
+    // Cleanup on unmount
+    return () => {
+      connectionRef.current?.stop();
+      connectionRef.current = null;
+    };
+  }, [joined, name]);
 
   // Simulate joining and waiting for a second player
   const handleJoin = (e: React.FormEvent) => {
@@ -33,8 +62,6 @@ function App() {
     if (name.trim()) {
       setJoined(true);
       setPlayers([{ name }]);
-      // Simulate second player joining after 1s
-      setTimeout(() => setPlayers([{ name }, { name: 'Opponent' }]), 1000);
     }
   };
 
@@ -99,4 +126,4 @@ function App() {
   );
 }
 
-export default App
+export default App;

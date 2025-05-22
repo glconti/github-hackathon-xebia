@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.SignalR;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddSignalR();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -13,6 +15,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// SignalR hub endpoint
+app.MapHub<GameHub>("/gamehub");
 
 var summaries = new[]
 {
@@ -34,6 +39,15 @@ app.MapGet("/weatherforecast", () =>
 .WithName("GetWeatherForecast");
 
 app.Run();
+
+public class GameHub : Hub
+{
+    public async Task JoinGame(string playerName)
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, "BattleshipRoom");
+        await Clients.Group("BattleshipRoom").SendAsync("PlayerJoined", playerName);
+    }
+}
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
