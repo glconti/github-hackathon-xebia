@@ -22,10 +22,9 @@ interface PlacedShip {
 }
 
 // Legend component to explain cell colors
-const Legend = () => {
-  return (
+const Legend = () => {  return (
     <div className="battleship-legend">
-      <h3>Legend</h3>
+      <h3>Galaxy Guide</h3>
       <div className="legend-items">
         <div className="legend-item">
           <div className="legend-color occupied"></div>
@@ -376,8 +375,11 @@ function App() {
       gameStatus += ` (Your last move: ${lastMoveResult.isHit ? "HIT!" : "Miss"} at (${lastMoveResult.row}, ${lastMoveResult.col}))`;
     }
   }
-
-  return (    <div className="game-container">
+  return (      <div className="game-container">
+      <h1>BATTLESHIP</h1>
+      <div className="star-character"></div>
+      <div className="alien-character"></div>
+      <div className="rocket"></div>
       <h2>{gameStatus}</h2>
       <div className="player-status">
         Players: {players.map(p => `${p.name} (${p.shipsPlaced || 0}/5 ships)`).join(' vs ')}
@@ -385,7 +387,7 @@ function App() {
       <div className="battleship-layout">
         <div className="battleship-grid">
           {Array.from({ length: GRID_SIZE }).map((_, row) => (
-            <div className="battleship-row" key={row}>
+            <div className="battleship-row" key={row} data-row={row + 1}>
               {Array.from({ length: GRID_SIZE }).map((_, col) => {                const occupied = isCellOccupied(row, col);
                 const myMove = moves.find(m => m.row === row && m.col === col);
                 const oppMove = opponentMoves.find(m => m.row === row && m.col === col);
