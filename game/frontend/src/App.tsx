@@ -38,6 +38,7 @@ function App() {
   const [selectedShip, setSelectedShip] = useState<Ship | null>(null);
   const [placedShips, setPlacedShips] = useState<PlacedShip[]>([]);
   const [isHorizontal, setIsHorizontal] = useState(true);
+  const [moves, setMoves] = useState<{ row: number; col: number }[]>([]);
   const connectionRef = useRef<HubConnection | null>(null);
 
   useEffect(() => {
@@ -149,6 +150,18 @@ function App() {
     );
   }
 
+  // Track if all ships are placed and moves
+  const allShipsPlaced = placedShips.length === SHIPS.length;
+
+  // Handle making a move
+  const handleMove = (row: number, col: number) => {
+    if (!allShipsPlaced) return; // Only allow moves after all ships are placed
+    // Prevent duplicate moves
+    if (moves.some(m => m.row === row && m.col === col)) return;
+    setMoves([...moves, { row, col }]);
+    // TODO: Send move to backend here
+  };
+
   // Render battleship grid and ships to place
   const handleCellClick = (row: number, col: number) => {
     if (!selectedShip) return;
@@ -185,16 +198,52 @@ function App() {
 
   const shipsToPlace = SHIPS.filter(ship => !placedShips.some(ps => ps.ship.id === ship.id));
 
+  // Place ships randomly
+  const placeShipsRandomly = () => {
+    const newPlacedShips: PlacedShip[] = [];
+    const grid = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
+    for (const ship of SHIPS) {
+      let placed = false;
+      for (let attempts = 0; attempts < 100 && !placed; attempts++) {
+        const horizontal = Math.random() < 0.5;
+        const maxRow = horizontal ? GRID_SIZE : GRID_SIZE - ship.size + 1;
+        const maxCol = horizontal ? GRID_SIZE - ship.size + 1 : GRID_SIZE;
+        const row = Math.floor(Math.random() * maxRow);
+        const col = Math.floor(Math.random() * maxCol);
+        // Check if space is free
+        let fits = true;
+        for (let i = 0; i < ship.size; i++) {
+          const r = horizontal ? row : row + i;
+          const c = horizontal ? col + i : col;
+          if (grid[r][c]) {
+            fits = false;
+            break;
+          }
+        }
+        if (fits) {
+          for (let i = 0; i < ship.size; i++) {
+            const r = horizontal ? row : row + i;
+            const c = horizontal ? col + i : col;
+            grid[r][c] = true;
+          }
+          newPlacedShips.push({ ship, row, col, horizontal });
+          placed = true;
+        }
+      }
+    }
+    setPlacedShips(newPlacedShips);
+    setSelectedShip(null);
+  };
+
   return (
     <div className="game-container">
-      <h2>Battleship: Place Your Ships</h2>
+      <h2>{allShipsPlaced ? 'Battleship: Make Your Move' : 'Battleship: Place Your Ships'}</h2>
       <div className="battleship-layout">
         <div className="battleship-grid">
           {Array.from({ length: GRID_SIZE }).map((_, row) => (
             <div className="battleship-row" key={row}>
               {Array.from({ length: GRID_SIZE }).map((_, col) => {
                 const occupied = isCellOccupied(row, col);
-                // Find which ship (if any) occupies this cell
                 let shipSymbol = '';
                 if (occupied) {
                   const ps = placedShips.find(ps => {
@@ -207,39 +256,49 @@ function App() {
                     shipSymbol = '■';
                   }
                 }
+                // Show move marker if move was made
+                const move = moves.find(m => m.row === row && m.col === col);
                 return (
                   <div
-                    className={`battleship-cell${occupied ? ' occupied' : ''}${selectedShip ? ' placeable' : ''}`}
+                    className={`battleship-cell${occupied ? ' occupied' : ''}${selectedShip ? ' placeable' : ''}${allShipsPlaced ? ' move-phase' : ''}`}
                     key={col}
-                    onClick={() => handleCellClick(row, col)}
-                    style={{ cursor: selectedShip ? 'pointer' : 'default' }}
+                    onClick={() => {
+                      if (!allShipsPlaced) handleCellClick(row, col);
+                      else handleMove(row, col);
+                    }}
+                    style={{ cursor: allShipsPlaced ? (!move ? 'crosshair' : 'not-allowed') : (selectedShip ? 'pointer' : 'default') }}
                   >
-                    {shipSymbol}
+                    {move ? <span className="move-marker">X</span> : shipSymbol}
                   </div>
                 );
               })}
             </div>
           ))}
         </div>
-        <div className="ships-to-place">
-          <h3>Ships to Place</h3>
-          <ul>
-            {shipsToPlace.map(ship => (
-              <li
-                key={ship.id}
-                className={`ship-item${selectedShip?.id === ship.id ? ' selected' : ''}`}
-                onClick={() => setSelectedShip(ship)}
-                style={{ cursor: 'pointer' }}
-              >
-                <span className="ship-name">{ship.name}</span>
-                <span className="ship-size">{'■'.repeat(ship.size)}</span>
-              </li>
-            ))}
-          </ul>
-          <button onClick={() => setIsHorizontal(h => !h)}>
-            Orientation: {isHorizontal ? 'Horizontal' : 'Vertical'}
-          </button>
-        </div>
+        {!allShipsPlaced && (
+          <div className="ships-to-place">
+            <h3>Ships to Place</h3>
+            <ul>
+              {shipsToPlace.map(ship => (
+                <li
+                  key={ship.id}
+                  className={`ship-item${selectedShip?.id === ship.id ? ' selected' : ''}`}
+                  onClick={() => setSelectedShip(ship)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <span className="ship-name">{ship.name}</span>
+                  <span className="ship-size">{'■'.repeat(ship.size)}</span>
+                </li>
+              ))}
+            </ul>
+            <button onClick={() => setIsHorizontal(h => !h)}>
+              Orientation: {isHorizontal ? 'Horizontal' : 'Vertical'}
+            </button>
+            <button onClick={placeShipsRandomly} style={{ marginLeft: 8 }}>
+              Place Ships Randomly
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
