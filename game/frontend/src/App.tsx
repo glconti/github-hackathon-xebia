@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
+import { HubConnectionBuilder, HubConnection, HttpTransportType } from '@microsoft/signalr';
 import './App.css';
 
 // Types for player and ship
@@ -27,43 +27,77 @@ function App() {
   const [name, setName] = useState('');
   const [joined, setJoined] = useState(false);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const connectionRef = useRef<HubConnection | null>(null);
 
   useEffect(() => {
     if (joined && !connectionRef.current) {
       const connection = new HubConnectionBuilder()
-        .withUrl('https://localhost:5001/gamehub') // Adjust port if needed
+        .withUrl('https://localhost:7224/gamehub', { // Updated port from launchSettings.json
+          skipNegotiation: true,
+          transport: HttpTransportType.WebSockets
+        })
         .withAutomaticReconnect()
         .build();
 
-      connection.on('PlayerJoined', (playerName: string) => {
-        setPlayers(prev => {
-          if (prev.find(p => p.name === playerName)) return prev;
-          return [...prev, { name: playerName }];
-        });
+      // Connection event handlers
+      connection.onclose(error => {
+        console.error('Connection closed:', error);
+        setConnectionError('Connection to game server lost');
       });
 
-      connection.start().then(() => {
-        connection.invoke('JoinGame', name);
+      // Listen for player list updates
+      connection.on('PlayerList', (playerNames: string[]) => {
+        console.log('Received player list:', playerNames);
+        setPlayers(playerNames.map(name => ({ name })));
       });
+
+      // Start connection
+      connection.start()
+        .then(() => {
+          console.log('Connected to SignalR hub');
+          connection.invoke('JoinGame', name)
+            .catch(err => {
+              console.error('Error invoking JoinGame:', err);
+              setConnectionError('Failed to join game');
+            });
+        })
+        .catch(err => {
+          console.error('Connection failed:', err);
+          setConnectionError('Failed to connect to game server');
+        });
 
       connectionRef.current = connection;
     }
+    
     // Cleanup on unmount
     return () => {
-      connectionRef.current?.stop();
-      connectionRef.current = null;
+      if (connectionRef.current) {
+        connectionRef.current.stop()
+          .catch(err => console.error('Error stopping connection:', err));
+        connectionRef.current = null;
+      }
     };
   }, [joined, name]);
 
-  // Simulate joining and waiting for a second player
+  // Handle join form submission
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
       setJoined(true);
-      setPlayers([{ name }]);
     }
   };
+
+  // Render connection error
+  if (connectionError) {
+    return (
+      <div className="error-container">
+        <h2>Connection Error</h2>
+        <p>{connectionError}</p>
+        <button onClick={() => window.location.reload()}>Retry</button>
+      </div>
+    );
+  }
 
   // Render join form
   if (!joined) {
@@ -92,6 +126,17 @@ function App() {
       <div className="game-container">
         <h2>Welcome, {name}!</h2>
         <p>Waiting for another player to join...</p>
+        <p className="player-status">Connected players: {players.length}/2</p>
+        {players.length > 0 && (
+          <div className="player-list">
+            <h3>Players:</h3>
+            <ul>
+              {players.map((player, index) => (
+                <li key={index}>{player.name}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     );
   }

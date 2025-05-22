@@ -27,3 +27,5 @@ C:\Users\CHGICON\repos\github-hackathon-xebia\game\backend\obj\Debug\net9.0\refi
 C:\Users\CHGICON\repos\github-hackathon-xebia\game\backend\obj\Debug\net9.0\backend.pdb
 C:\Users\CHGICON\repos\github-hackathon-xebia\game\backend\obj\Debug\net9.0\backend.genruntimeconfig.cache
 C:\Users\CHGICON\repos\github-hackathon-xebia\game\backend\obj\Debug\net9.0\ref\backend.dll
+C:\Users\CHGICON\repos\github-hackathon-xebia\game\backend\bin\Debug\net9.0\Newtonsoft.Json.dll
+C:\Users\CHGICON\repos\github-hackathon-xebia\game\backend\bin\Debug\net9.0\System.Net.WebSockets.WebSocketProtocol.dll
