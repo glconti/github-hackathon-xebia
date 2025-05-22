@@ -23,4 +23,5 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 COPY --from=backend-build /app/backend/out .
 EXPOSE 5000
+ENV VITE_SIGNALR_URL="https://xebia.conti.foo"
 ENTRYPOINT ["dotnet", "backend.dll"]
