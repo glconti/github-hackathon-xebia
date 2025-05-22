@@ -1,18 +1,44 @@
 import { useState } from 'react'
 import './App.css'
 
+// Types for player and ship
+interface Player {
+  name: string;
+}
+
+interface Ship {
+  id: number;
+  name: string;
+  size: number;
+}
+
+const SHIPS: Ship[] = [
+  { id: 1, name: 'Carrier', size: 5 },
+  { id: 2, name: 'Battleship', size: 4 },
+  { id: 3, name: 'Cruiser', size: 3 },
+  { id: 4, name: 'Submarine', size: 3 },
+  { id: 5, name: 'Destroyer', size: 2 },
+];
+
+const GRID_SIZE = 10;
+
 function App() {
   const [name, setName] = useState('');
   const [joined, setJoined] = useState(false);
+  const [players, setPlayers] = useState<Player[]>([]); // Simulate players for now
 
+  // Simulate joining and waiting for a second player
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
       setJoined(true);
-      // TODO: Call backend to join a game with the chosen name
+      setPlayers([{ name }]);
+      // Simulate second player joining after 1s
+      setTimeout(() => setPlayers([{ name }, { name: 'Opponent' }]), 1000);
     }
   };
 
+  // Render join form
   if (!joined) {
     return (
       <div className="join-container">
@@ -33,11 +59,42 @@ function App() {
     );
   }
 
+  // Wait for second player
+  if (players.length < 2) {
+    return (
+      <div className="game-container">
+        <h2>Welcome, {name}!</h2>
+        <p>Waiting for another player to join...</p>
+      </div>
+    );
+  }
+
+  // Render battleship grid and ships to place
   return (
     <div className="game-container">
-      <h2>Welcome, {name}!</h2>
-      <p>Joining a game...</p>
-      {/* TODO: Show game board or waiting room here */}
+      <h2>Battleship: Place Your Ships</h2>
+      <div className="battleship-layout">
+        <div className="battleship-grid">
+          {Array.from({ length: GRID_SIZE }).map((_, row) => (
+            <div className="battleship-row" key={row}>
+              {Array.from({ length: GRID_SIZE }).map((_, col) => (
+                <div className="battleship-cell" key={col}></div>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="ships-to-place">
+          <h3>Ships to Place</h3>
+          <ul>
+            {SHIPS.map(ship => (
+              <li key={ship.id} className="ship-item">
+                <span className="ship-name">{ship.name}</span>
+                <span className="ship-size">{'■'.repeat(ship.size)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }

@@ -89,3 +89,61 @@
   border-radius: 12px;
   box-shadow: 0 2px 16px rgba(0,0,0,0.15);
 }
+
+.battleship-layout {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  align-items: flex-start;
+  margin-top: 2rem;
+}
+
+.battleship-grid {
+  display: flex;
+  flex-direction: column;
+  background: #181c24;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  padding: 8px;
+}
+
+.battleship-row {
+  display: flex;
+}
+
+.battleship-cell {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #333;
+  background: #23272f;
+  margin: 1px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.ships-to-place {
+  min-width: 180px;
+  background: #181c24;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  padding: 1rem 1.5rem;
+}
+
+.ships-to-place h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.ship-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+  font-size: 1.1em;
+}
+
+.ship-size {
+  color: #61dafb;
+  font-size: 1.2em;
+  letter-spacing: 2px;
+}
