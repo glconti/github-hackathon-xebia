@@ -1,12 +1,12 @@
 # .NET
-bin/
-obj/
+**/bin/
+**/obj/
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
-*.vs/
-*.vscode/
+.vs/
+.vscode/
 *.dbmdl
 *.log
 *.pdb
@@ -26,6 +26,8 @@ TestResult*/
 # Backend build artifacts
 backend/bin/
 backend/obj/
+backend/Properties/PublishProfiles/
+backend/Properties/ServiceDependencies/
 
 # React
 node_modules/
