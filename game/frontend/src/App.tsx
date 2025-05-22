@@ -5,6 +5,7 @@ import './App.css';
 // Types for player and ship
 interface Player {
   name: string;
+  shipsPlaced?: number;
 }
 
 interface Ship {
@@ -38,10 +39,11 @@ function App() {
   const [selectedShip, setSelectedShip] = useState<Ship | null>(null);
   const [placedShips, setPlacedShips] = useState<PlacedShip[]>([]);
   const [isHorizontal, setIsHorizontal] = useState(true);
-  const [moves, setMoves] = useState<{ row: number; col: number }[]>([]);
+  const [moves, setMoves] = useState<{ row: number; col: number; isHit?: boolean }[]>([]);
   const [isMyTurn, setIsMyTurn] = useState(false);
   const [opponentMoves, setOpponentMoves] = useState<{ row: number; col: number }[]>([]);
   const [gameStarted, setGameStarted] = useState(false);
+  const [lastMoveResult, setLastMoveResult] = useState<{ row: number; col: number; isHit: boolean } | null>(null);
   const connectionRef = useRef<HubConnection | null>(null);
 
   const allShipsPlaced = placedShips.length === SHIPS.length;
@@ -56,12 +58,14 @@ function App() {
       connection.onclose((error?: Error) => {
         console.error('Connection closed:', error);
         setConnectionError('Connection to game server lost');
-      });
-
-      // Listen for player list updates
-      connection.on('PlayerList', (playerNames: string[]) => {
+      });      // Listen for player list updates
+      connection.on('PlayerList', (playerNames: string[], shipCounts: Record<string, number>) => {
         console.log('Received player list:', playerNames);
-        setPlayers(playerNames.map(name => ({ name })));
+        console.log('Ship counts:', shipCounts);
+        setPlayers(playerNames.map(name => ({ 
+          name, 
+          shipsPlaced: shipCounts[name] || 0 
+        })));
       });
 
       // Listen for turn updates
@@ -74,13 +78,34 @@ function App() {
       connection.on('OpponentTurn', () => {
         console.log('Opponent turn!');
         setIsMyTurn(false);
-        setGameStarted(true);
-      });
-      
-      // Listen for opponent move
+        setGameStarted(true);      });
+        // Listen for opponent move
       connection.on('OpponentMove', (row: number, col: number) => {
         console.log('Opponent moved at:', row, col);
         setOpponentMoves(prev => [...prev, { row, col }]);
+      });
+        // Listen for ship placement confirmation
+      connection.on('ShipPlaced', (shipId: number) => {
+        console.log(`Ship ${shipId} placed successfully`);
+      });
+      
+      // Listen for game started event
+      connection.on('GameStarted', () => {
+        console.log('Game has started!');
+        setGameStarted(true);
+      });
+      
+      // Listen for move result (hit or miss)
+      connection.on('MoveResult', (row: number, col: number, isHit: boolean) => {
+        console.log(`Move result at (${row}, ${col}): ${isHit ? 'HIT!' : 'Miss'}`);
+        setLastMoveResult({ row, col, isHit });
+        setMoves(prev => 
+          prev.map(move => 
+            move.row === row && move.col === col 
+              ? { ...move, isHit } 
+              : move
+          )
+        );
       });
 
       // Start connection
@@ -173,18 +198,23 @@ function App() {
   const handleMove = (row: number, col: number) => {
     if (!allShipsPlaced || !isMyTurn || !gameStarted) return;
     if (moves.some(m => m.row === row && m.col === col)) return;
-    
-    console.log('Making move at:', row, col);
+      console.log('Making move at:', row, col);
     setMoves(prev => [...prev, { row, col }]);
     
-    if (connectionRef.current) {      connectionRef.current.invoke('MakeMove', row, col)
+    if (connectionRef.current) {
+      connectionRef.current.invoke('MakeMove', row, col)
         .catch((err: Error) => console.error('Error making move:', err));
     }
-  };
-
-  // Render battleship grid and ships to place
+  };  // Render battleship grid and ships to place
   const handleCellClick = (row: number, col: number) => {
     if (!selectedShip) return;
+    
+    // Check if this ship is already placed
+    if (placedShips.some(ps => ps.ship.id === selectedShip.id)) {
+      console.log(`Ship ${selectedShip.name} already placed`);
+      return;
+    }
+    
     // Check if ship fits and does not overlap
     const positions = Array.from({ length: selectedShip.size }, (_, i) =>
       isHorizontal ? [row, col + i] : [row + i, col]
@@ -203,7 +233,22 @@ function App() {
     ) {
       return; // Invalid placement
     }
+    
+    // Update local state
     setPlacedShips([...placedShips, { ship: selectedShip, row, col, horizontal: isHorizontal }]);
+    
+    // Send ship placement to server
+    if (connectionRef.current) {
+      connectionRef.current.invoke('PlaceShip', 
+        selectedShip.id, 
+        selectedShip.name, 
+        selectedShip.size, 
+        row, 
+        col, 
+        isHorizontal
+      ).catch((err: Error) => console.error('Error placing ship:', err));
+    }
+    
     setSelectedShip(null);
   };
 
@@ -217,9 +262,11 @@ function App() {
   };
 
   const shipsToPlace = SHIPS.filter(ship => !placedShips.some(ps => ps.ship.id === ship.id));
-
   // Place ships randomly
   const placeShipsRandomly = () => {
+    // Clear existing placements first
+    setPlacedShips([]);
+    
     const newPlacedShips: PlacedShip[] = [];
     const grid = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
     for (const ship of SHIPS) {
@@ -245,54 +292,86 @@ function App() {
             const r = horizontal ? row : row + i;
             const c = horizontal ? col + i : col;
             grid[r][c] = true;
-          }
-          newPlacedShips.push({ ship, row, col, horizontal });
+          }          newPlacedShips.push({ ship, row, col, horizontal });
           placed = true;
         }
       }
     }
+    
     setPlacedShips(newPlacedShips);
     setSelectedShip(null);
-  };
-
-  // Game status message
+    
+    // Send all ship placements to server
+    if (connectionRef.current) {
+      for (const shipPlacement of newPlacedShips) {
+        connectionRef.current.invoke('PlaceShip',
+          shipPlacement.ship.id,
+          shipPlacement.ship.name,
+          shipPlacement.ship.size,
+          shipPlacement.row,
+          shipPlacement.col,
+          shipPlacement.horizontal
+        ).catch((err: Error) => console.error('Error placing ship:', err));
+      }
+    }
+  };  // Game status message
   let gameStatus = "";
   if (!allShipsPlaced) {
-    gameStatus = "Battleship: Place Your Ships";
+    gameStatus = `Battleship: Place Your Ships (${placedShips.length}/5)`;
   } else if (!gameStarted) {
-    gameStatus = "Waiting for game to start...";
+    // Check if opponent has placed all ships
+    const opponent = players.find(p => p.name !== name);
+    if (opponent && opponent.shipsPlaced === 5) {
+      gameStatus = "All ships placed! Game is starting...";
+    } else if (opponent) {
+      gameStatus = `Waiting for opponent to place ships (${opponent.shipsPlaced || 0}/5)`;
+    } else {
+      gameStatus = "Waiting for game to start...";
+    }
   } else if (isMyTurn) {
     gameStatus = "Your Turn: Make a Move";
+    // Add last move feedback if there was one
+    if (lastMoveResult) {
+      gameStatus += ` (Last move: ${lastMoveResult.isHit ? "HIT!" : "Miss"} at (${lastMoveResult.row}, ${lastMoveResult.col}))`;
+    }
   } else {
     gameStatus = "Opponent's Turn";
+    // Add last move feedback if there was one
+    if (lastMoveResult) {
+      gameStatus += ` (Your last move: ${lastMoveResult.isHit ? "HIT!" : "Miss"} at (${lastMoveResult.row}, ${lastMoveResult.col}))`;
+    }
   }
 
-  return (
-    <div className="game-container">
+  return (    <div className="game-container">
       <h2>{gameStatus}</h2>
       <div className="player-status">
-        Players: {players.map(p => p.name).join(' vs ')}
+        Players: {players.map(p => `${p.name} (${p.shipsPlaced || 0}/5 ships)`).join(' vs ')}
       </div>
       <div className="battleship-layout">
         <div className="battleship-grid">
           {Array.from({ length: GRID_SIZE }).map((_, row) => (
             <div className="battleship-row" key={row}>
-              {Array.from({ length: GRID_SIZE }).map((_, col) => {
-                const occupied = isCellOccupied(row, col);
+              {Array.from({ length: GRID_SIZE }).map((_, col) => {                const occupied = isCellOccupied(row, col);
                 const myMove = moves.find(m => m.row === row && m.col === col);
                 const oppMove = opponentMoves.find(m => m.row === row && m.col === col);
                 
-                let cellClass = "battleship-cell";
-                if (occupied) cellClass += " occupied";
-                if (selectedShip) cellClass += " placeable";
+                // Check if this is the last move made by the player
+                const isLastMove = lastMoveResult && lastMoveResult.row === row && lastMoveResult.col === col;
+                  let cellClass = "battleship-cell";
+                if (occupied) cellClass += " occupied";                if (selectedShip) cellClass += " placeable";
                 if (allShipsPlaced) cellClass += " move-phase";
                 if (oppMove && occupied) cellClass += " hit";
                 if (oppMove && !occupied) cellClass += " miss";
+                // Add hit/miss classes for player's moves
+                if (myMove?.isHit === true) cellClass += " enemy-hit";
+                if (myMove?.isHit === false) cellClass += " enemy-miss";
+                // Add visual indicator for the last move
+                if (isLastMove) cellClass += " last-move";
                 
                 // Cell content
                 let content = "";
                 if (occupied) content = "■";
-                if (myMove) content = "X";
+                if (myMove) content = myMove.isHit === true ? "✓" : myMove.isHit === false ? "✗" : "?";
                 if (oppMove) content = oppMove && occupied ? "X" : "O";
                 
                 return (

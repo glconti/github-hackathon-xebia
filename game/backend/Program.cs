@@ -60,11 +60,22 @@ public class GameHub : Hub
     private static ConcurrentDictionary<string, string> Players = new(); // ConnectionId -> Name
     // Track player turns
     private static ConcurrentDictionary<string, bool> PlayerTurns = new(); // ConnectionId -> IsMyTurn
+    // Track ship positions for each player
+    private static ConcurrentDictionary<string, List<ShipPosition>> PlayerShips = new(); // ConnectionId -> List of ship positions
+    // Track hit and miss positions for each player
+    private static ConcurrentDictionary<string, List<Position>> PlayerHits = new(); // ConnectionId -> List of hit positions
+    private static ConcurrentDictionary<string, List<Position>> PlayerMisses = new(); // ConnectionId -> List of miss positions
 
     public async Task JoinGame(string playerName)
     {
         Players[Context.ConnectionId] = playerName;
         await Groups.AddToGroupAsync(Context.ConnectionId, "BattleshipRoom");
+        
+        // Initialize empty ship positions list
+        PlayerShips[Context.ConnectionId] = new List<ShipPosition>();
+        // Initialize empty hit and miss lists
+        PlayerHits[Context.ConnectionId] = new List<Position>();
+        PlayerMisses[Context.ConnectionId] = new List<Position>();
         
         // Set turn for first player who joins
         if (Players.Count == 1)
@@ -87,6 +98,56 @@ public class GameHub : Hub
         }
         
         await BroadcastPlayers();
+    }    public async Task PlaceShip(int shipId, string shipName, int size, int row, int col, bool horizontal)
+    {
+        // Check if this ship has already been placed (prevent duplicates)
+        if (PlayerShips[Context.ConnectionId].Any(s => s.ShipId == shipId))
+        {
+            Console.WriteLine($"Ship {shipId} already placed by player {Context.ConnectionId}");
+            await Clients.Caller.SendAsync("ShipPlaced", shipId);
+            return;
+        }
+        
+        var positions = new List<Position>();
+        for (int i = 0; i < size; i++)
+        {
+            int r = horizontal ? row : row + i;
+            int c = horizontal ? col + i : col;
+            positions.Add(new Position { Row = r, Col = c });
+        }
+
+        PlayerShips[Context.ConnectionId].Add(new ShipPosition
+        {
+            ShipId = shipId,
+            ShipName = shipName,
+            Positions = positions
+        });
+        
+        Console.WriteLine($"Player {Context.ConnectionId} placed ship {shipId}. Total ships: {PlayerShips[Context.ConnectionId].Count}");
+        await Clients.Caller.SendAsync("ShipPlaced", shipId);
+        
+        // Check if both players have placed all their ships (5 ships per player)
+        if (Players.Count == 2 && 
+            PlayerShips.All(ps => ps.Value.Count == 5))
+        {
+            // Both players have placed all their ships, start the game
+            Console.WriteLine("All ships placed by both players. Starting game!");
+            
+            // Find the first player (who should start)
+            var firstPlayer = Players.Keys.First();
+            var secondPlayer = Players.Keys.Skip(1).First();
+            
+            // Set turns
+            PlayerTurns[firstPlayer] = true;
+            PlayerTurns[secondPlayer] = false;
+            
+            // Notify players about whose turn it is
+            await Clients.Client(firstPlayer).SendAsync("YourTurn");
+            await Clients.Client(secondPlayer).SendAsync("OpponentTurn");
+            
+            // Notify all players that the game has started
+            await Clients.Group("BattleshipRoom").SendAsync("GameStarted");
+        }
     }
 
     public async Task MakeMove(int row, int col)
@@ -110,8 +171,34 @@ public class GameHub : Hub
 
         if (opponentConnectionId != null)
         {
+            // Check if the move hit any of the opponent's ships
+            bool isHit = false;
+            
+            if (PlayerShips.TryGetValue(opponentConnectionId, out var opponentShips))
+            {
+                foreach (var ship in opponentShips)
+                {
+                    if (ship.Positions.Any(p => p.Row == row && p.Col == col))
+                    {
+                        isHit = true;
+                        // Add to player's hits
+                        PlayerHits[Context.ConnectionId].Add(new Position { Row = row, Col = col });
+                        break;
+                    }
+                }
+            }
+            
+            // If not a hit, it's a miss
+            if (!isHit)
+            {
+                PlayerMisses[Context.ConnectionId].Add(new Position { Row = row, Col = col });
+            }
+            
             // Send move to opponent
             await Clients.Client(opponentConnectionId).SendAsync("OpponentMove", row, col);
+            
+            // Send hit/miss status back to the player who made the move
+            await Clients.Client(Context.ConnectionId).SendAsync("MoveResult", row, col, isHit);
             
             // Switch turns
             PlayerTurns[Context.ConnectionId] = false;
@@ -127,15 +214,33 @@ public class GameHub : Hub
     {
         Players.TryRemove(Context.ConnectionId, out _);
         PlayerTurns.TryRemove(Context.ConnectionId, out _);
+        PlayerShips.TryRemove(Context.ConnectionId, out _);
+        PlayerHits.TryRemove(Context.ConnectionId, out _);
+        PlayerMisses.TryRemove(Context.ConnectionId, out _);
         await BroadcastPlayers();
         await base.OnDisconnectedAsync(exception);
-    }
-
-    private Task BroadcastPlayers()
+    }    private Task BroadcastPlayers()
     {
         var playerNames = Players.Values.ToArray();
-        return Clients.Group("BattleshipRoom").SendAsync("PlayerList", playerNames);
+        var playerShipCounts = Players.Keys.ToDictionary(
+            connectionId => Players[connectionId], 
+            connectionId => PlayerShips.ContainsKey(connectionId) ? PlayerShips[connectionId].Count : 0
+        );
+        return Clients.Group("BattleshipRoom").SendAsync("PlayerList", playerNames, playerShipCounts);
     }
+}
+
+public class Position
+{
+    public int Row { get; set; }
+    public int Col { get; set; }
+}
+
+public class ShipPosition
+{
+    public int ShipId { get; set; }
+    public required string ShipName { get; set; }
+    public List<Position> Positions { get; set; } = new List<Position>();
 }
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)

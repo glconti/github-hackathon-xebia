@@ -143,6 +143,25 @@
   background: #4caf50;
 }
 
+.battleship-cell.enemy-hit {
+  background: #ff9800;
+}
+
+.battleship-cell.enemy-miss {
+  background: #607d8b;
+}
+
+/* Add a visual feedback for the last move */
+.battleship-cell.last-move {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
 .ships-to-place {
   min-width: 180px;
   background: #181c24;
