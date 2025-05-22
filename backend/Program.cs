@@ -16,7 +16,6 @@ builder.Services.AddCors(options =>
                .AllowCredentials();
     });
 });
-builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
@@ -36,10 +35,5 @@ app.UseStaticFiles();
 
 // SignalR hub endpoint
 app.MapHub<GameHub>("/gamehub");
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
 
 app.Run();
