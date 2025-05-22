@@ -22,4 +22,5 @@ RUN dotnet publish ./backend/backend.csproj -c Release -o ./backend/out
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 COPY --from=backend-build /app/backend/out .
+EXPOSE 5000 5001
 ENTRYPOINT ["dotnet", "backend.dll"]
