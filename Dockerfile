@@ -1,7 +1,7 @@
 # Build and run fullstack Battleship app
 
 # 1. Build frontend
-FROM node:20 AS frontend-build
+FROM node:22 AS frontend-build
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
