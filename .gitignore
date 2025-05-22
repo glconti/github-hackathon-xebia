@@ -1,0 +1,21 @@
+# Node.js
+node_modules/
+.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# VSCode
+.vscode/
+
+# Betriebssystem
+.DS_Store
+Thumbs.db
+
+# Sonstiges
+*.log
+*.tmp
+
+# Build/Dist
+/dist/
+/build/

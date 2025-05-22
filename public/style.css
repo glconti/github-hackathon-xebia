@@ -1,0 +1,17 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #1e293b;
+  color: #f1f5f9;
+  text-align: center;
+}
+
+#game {
+  background: #334155;
+  border: 2px solid #64748b;
+  margin-top: 20px;
+}
+
+#status {
+  margin: 20px;
+  font-size: 1.2em;
+}
