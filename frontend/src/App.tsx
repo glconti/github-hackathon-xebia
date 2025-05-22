@@ -85,7 +85,7 @@ function App() {
 
   useEffect(() => {
     if (joined && !connectionRef.current) {
-      const hubUrl = (import.meta.env.VITE_SIGNALR_URL || 'http://localhost:5000') + '/gamehub';
+      const hubUrl = (import.meta.env.COOLIFY_FQDN || 'http://localhost:5000') + '/gamehub';
       const connection = new HubConnectionBuilder()
         .withUrl(hubUrl)
         .configureLogging(LogLevel.Information)
