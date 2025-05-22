@@ -78,6 +78,7 @@ function App() {
   const [opponentMoves, setOpponentMoves] = useState<{ row: number; col: number }[]>([]);
   const [gameStarted, setGameStarted] = useState(false);
   const [lastMoveResult, setLastMoveResult] = useState<{ row: number; col: number; isHit: boolean } | null>(null);
+  const [animatingCells, setAnimatingCells] = useState<{ key: string; type: 'splash' | 'bomb' }[]>([]);
   const connectionRef = useRef<HubConnection | null>(null);
 
   const allShipsPlaced = placedShips.length === SHIPS.length;
@@ -166,6 +167,21 @@ function App() {
       }
     };
   }, [joined, name]);
+
+  // Animation trigger for move results
+  useEffect(() => {
+    if (lastMoveResult) {
+      const key = `${lastMoveResult.row},${lastMoveResult.col}`;
+      setAnimatingCells((prev) => [
+        ...prev.filter(a => a.key !== key),
+        { key, type: lastMoveResult.isHit ? 'bomb' : 'splash' }
+      ]);
+      // Remove animation after duration
+      setTimeout(() => {
+        setAnimatingCells((prev) => prev.filter(a => a.key !== key));
+      }, 650);
+    }
+  }, [lastMoveResult]);
 
   // Handle join form submission
   const handleJoin = (e: React.FormEvent) => {
@@ -404,6 +420,9 @@ function App() {
                 if (myMove?.isHit === false) cellClass += " enemy-miss";
                 // Add visual indicator for the last move
                 if (isLastMove) cellClass += " last-move";
+                // Animation classes
+                const anim = animatingCells.find(a => a.key === `${row},${col}`);
+                if (anim) cellClass += ` ${anim.type}`;
                 
                 // Cell content
                 let content = "";
