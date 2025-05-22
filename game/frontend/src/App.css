@@ -200,15 +200,59 @@
   text-align: center;
 }
 
-.error-container button {
-  padding: 0.7em 1.2em;
-  font-size: 1em;
-  background: #646cff;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-top: 1rem;
+/* Legend styles */
+.battleship-legend {
+  background: #181c24;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 5px;
+}
+
+.legend-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid #333;
+}
+
+.legend-color.occupied {
+  background: #2c3646;
+}
+
+.legend-color.hit {
+  background: #ff5252;
+}
+
+.legend-color.miss {
+  background: #4caf50;
+}
+
+.legend-color.enemy-hit {
+  background: #ff9800;
+}
+
+.legend-color.enemy-miss {
+  background: #607d8b;
+}
+
+.legend-color.last-move {
+  background: #23272f;
+  animation: pulse 1s infinite;
 }
 
 .player-status {

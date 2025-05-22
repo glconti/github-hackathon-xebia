@@ -21,6 +21,41 @@ interface PlacedShip {
   horizontal: boolean;
 }
 
+// Legend component to explain cell colors
+const Legend = () => {
+  return (
+    <div className="battleship-legend">
+      <h3>Legend</h3>
+      <div className="legend-items">
+        <div className="legend-item">
+          <div className="legend-color occupied"></div>
+          <span>Your Ship</span>
+        </div>
+        <div className="legend-item">
+          <div className="legend-color hit"></div>
+          <span>Enemy Hit on Your Ship</span>
+        </div>
+        <div className="legend-item">
+          <div className="legend-color miss"></div>
+          <span>Enemy Miss</span>
+        </div>
+        <div className="legend-item">
+          <div className="legend-color enemy-hit"></div>
+          <span>Your Hit on Enemy Ship</span>
+        </div>
+        <div className="legend-item">
+          <div className="legend-color enemy-miss"></div>
+          <span>Your Miss</span>
+        </div>
+        <div className="legend-item">
+          <div className="legend-color last-move"></div>
+          <span>Last Move</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SHIPS: Ship[] = [
   { id: 1, name: 'Carrier', size: 5 },
   { id: 2, name: 'Battleship', size: 4 },
@@ -419,6 +454,7 @@ function App() {
           </div>
         )}
       </div>
+      <Legend />
     </div>
   );
 }
