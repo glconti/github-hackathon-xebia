@@ -39,11 +39,9 @@ function App() {
   const [placedShips, setPlacedShips] = useState<PlacedShip[]>([]);
   const [isHorizontal, setIsHorizontal] = useState(true);
   const [moves, setMoves] = useState<{ row: number; col: number }[]>([]);
-  const [isMyTurn, setIsMyTurn] = useState(() => {
-    // If player is first in the list, assume they start (frontend fallback)
-    return false;
-  });
+  const [isMyTurn, setIsMyTurn] = useState(false);
   const [opponentMoves, setOpponentMoves] = useState<{ row: number; col: number }[]>([]);
+  const [gameStarted, setGameStarted] = useState(false);
   const connectionRef = useRef<HubConnection | null>(null);
 
   const allShipsPlaced = placedShips.length === SHIPS.length;
@@ -54,10 +52,8 @@ function App() {
         .withUrl('http://localhost:5062/gamehub')
         .configureLogging(LogLevel.Information)
         .withAutomaticReconnect()
-        .build();
-
-      // Connection event handlers
-      connection.onclose(error => {
+        .build();      // Connection event handlers
+      connection.onclose((error?: Error) => {
         console.error('Connection closed:', error);
         setConnectionError('Connection to game server lost');
       });
@@ -69,25 +65,33 @@ function App() {
       });
 
       // Listen for turn updates
-      connection.on('YourTurn', () => setIsMyTurn(true));
-      connection.on('OpponentTurn', () => setIsMyTurn(false));
+      connection.on('YourTurn', () => {
+        console.log('Your turn!');
+        setIsMyTurn(true);
+        setGameStarted(true);
+      });
+      
+      connection.on('OpponentTurn', () => {
+        console.log('Opponent turn!');
+        setIsMyTurn(false);
+        setGameStarted(true);
+      });
+      
       // Listen for opponent move
       connection.on('OpponentMove', (row: number, col: number) => {
-        setOpponentMoves(moves => [...moves, { row, col }]);
-        setIsMyTurn(true);
+        console.log('Opponent moved at:', row, col);
+        setOpponentMoves(prev => [...prev, { row, col }]);
       });
 
       // Start connection
       connection.start()
         .then(() => {
           console.log('Connected to SignalR hub');
-          connection.invoke('JoinGame', name)
-            .catch(err => {
-              console.error('Error invoking JoinGame:', err);
-              setConnectionError('Failed to join game');
-            });
-        })
-        .catch(err => {
+          connection.invoke('JoinGame', name)          .catch((err: Error) => {
+            console.error('Error invoking JoinGame:', err);
+            setConnectionError('Failed to join game');
+          });
+        })        .catch((err: Error) => {
           console.error('Connection failed:', err);
           setConnectionError('Failed to connect to game server');
         });
@@ -97,24 +101,12 @@ function App() {
     
     // Cleanup on unmount
     return () => {
-      if (connectionRef.current) {
-        connectionRef.current.stop()
-          .catch(err => console.error('Error stopping connection:', err));
+      if (connectionRef.current) {        connectionRef.current.stop()
+          .catch((err: Error) => console.error('Error stopping connection:', err));
         connectionRef.current = null;
       }
     };
   }, [joined, name]);
-
-  useEffect(() => {
-    // If all ships are placed and there are 2 players, and no turn event received, set first player's turn as fallback
-    if (allShipsPlaced && players.length === 2 && moves.length === 0 && opponentMoves.length === 0) {
-      if (players[0]?.name === name) {
-        setIsMyTurn(true);
-      } else if (players[1]?.name === name) {
-        setIsMyTurn(false);
-      }
-    }
-  }, [allShipsPlaced, players, name, moves.length, opponentMoves.length]);
 
   // Handle join form submission
   const handleJoin = (e: React.FormEvent) => {
@@ -179,12 +171,14 @@ function App() {
 
   // Send move to backend
   const handleMove = (row: number, col: number) => {
-    if (!allShipsPlaced || !isMyTurn) return;
+    if (!allShipsPlaced || !isMyTurn || !gameStarted) return;
     if (moves.some(m => m.row === row && m.col === col)) return;
-    setMoves([...moves, { row, col }]);
-    setIsMyTurn(false);
-    if (connectionRef.current) {
-      connectionRef.current.invoke('MakeMove', row, col);
+    
+    console.log('Making move at:', row, col);
+    setMoves(prev => [...prev, { row, col }]);
+    
+    if (connectionRef.current) {      connectionRef.current.invoke('MakeMove', row, col)
+        .catch((err: Error) => console.error('Error making move:', err));
     }
   };
 
@@ -261,41 +255,60 @@ function App() {
     setSelectedShip(null);
   };
 
+  // Game status message
+  let gameStatus = "";
+  if (!allShipsPlaced) {
+    gameStatus = "Battleship: Place Your Ships";
+  } else if (!gameStarted) {
+    gameStatus = "Waiting for game to start...";
+  } else if (isMyTurn) {
+    gameStatus = "Your Turn: Make a Move";
+  } else {
+    gameStatus = "Opponent's Turn";
+  }
+
   return (
     <div className="game-container">
-      <h2>{allShipsPlaced ? (isMyTurn ? 'Your Turn: Make a Move' : "Opponent's Turn") : 'Battleship: Place Your Ships'}</h2>
+      <h2>{gameStatus}</h2>
+      <div className="player-status">
+        Players: {players.map(p => p.name).join(' vs ')}
+      </div>
       <div className="battleship-layout">
         <div className="battleship-grid">
           {Array.from({ length: GRID_SIZE }).map((_, row) => (
             <div className="battleship-row" key={row}>
               {Array.from({ length: GRID_SIZE }).map((_, col) => {
                 const occupied = isCellOccupied(row, col);
-                let shipSymbol = '';
-                if (occupied) {
-                  const ps = placedShips.find(ps => {
-                    const psPositions = Array.from({ length: ps.ship.size }, (_, i) =>
-                      ps.horizontal ? [ps.row, ps.col + i] : [ps.row + i, ps.col]
-                    );
-                    return psPositions.some(([pr, pc]) => pr === row && pc === col);
-                  });
-                  if (ps) {
-                    shipSymbol = '■';
-                  }
-                }
-                // Show move marker if move was made
                 const myMove = moves.find(m => m.row === row && m.col === col);
                 const oppMove = opponentMoves.find(m => m.row === row && m.col === col);
+                
+                let cellClass = "battleship-cell";
+                if (occupied) cellClass += " occupied";
+                if (selectedShip) cellClass += " placeable";
+                if (allShipsPlaced) cellClass += " move-phase";
+                if (oppMove && occupied) cellClass += " hit";
+                if (oppMove && !occupied) cellClass += " miss";
+                
+                // Cell content
+                let content = "";
+                if (occupied) content = "■";
+                if (myMove) content = "X";
+                if (oppMove) content = oppMove && occupied ? "X" : "O";
+                
                 return (
                   <div
-                    className={`battleship-cell${occupied ? ' occupied' : ''}${selectedShip ? ' placeable' : ''}${allShipsPlaced ? ' move-phase' : ''}`}
+                    className={cellClass}
                     key={col}
                     onClick={() => {
                       if (!allShipsPlaced) handleCellClick(row, col);
-                      else handleMove(row, col);
+                      else if (gameStarted) handleMove(row, col);
                     }}
-                    style={{ cursor: allShipsPlaced && isMyTurn ? (!myMove ? 'crosshair' : 'not-allowed') : (selectedShip ? 'pointer' : 'default') }}
+                    style={{ 
+                      cursor: !allShipsPlaced && selectedShip ? 'pointer' : 
+                              (allShipsPlaced && gameStarted && isMyTurn && !myMove ? 'crosshair' : 'default')
+                    }}
                   >
-                    {myMove ? <span className="move-marker">X</span> : oppMove ? <span className="opponent-move-marker">O</span> : shipSymbol}
+                    {content}
                   </div>
                 );
               })}

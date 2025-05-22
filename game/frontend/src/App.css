@@ -121,6 +121,28 @@
   transition: background 0.2s;
 }
 
+.battleship-cell.occupied {
+  background: #2c3646;
+}
+
+.battleship-cell.placeable:hover {
+  background: #3f4d63;
+  cursor: pointer;
+}
+
+.battleship-cell.move-phase:hover:not(.occupied):not(.hit):not(.miss) {
+  background: #3f4d63;
+  cursor: crosshair;
+}
+
+.battleship-cell.hit {
+  background: #ff5252;
+}
+
+.battleship-cell.miss {
+  background: #4caf50;
+}
+
 .ships-to-place {
   min-width: 180px;
   background: #181c24;
@@ -201,4 +223,16 @@
 
 .player-list li:last-child {
   border-bottom: none;
+}
+
+.move-marker {
+  display: inline-block;
+  color: #ff5252;
+  font-weight: bold;
+}
+
+.opponent-move-marker {
+  display: inline-block;
+  color: #4caf50;
+  font-weight: bold;
 }
