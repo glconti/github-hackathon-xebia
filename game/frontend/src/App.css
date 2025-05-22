@@ -40,3 +40,52 @@
 .read-the-docs {
   color: #888;
 }
+
+.join-container {
+  max-width: 400px;
+  margin: 4rem auto;
+  padding: 2rem;
+  background: #222;
+  border-radius: 12px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+}
+
+.join-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.join-form input[type="text"] {
+  padding: 0.5em 1em;
+  border-radius: 6px;
+  border: 1px solid #444;
+  font-size: 1.1em;
+  background: #181818;
+  color: #fff;
+}
+
+.join-form button {
+  padding: 0.7em 1.2em;
+  font-size: 1.1em;
+  background: #646cff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.join-form button:disabled {
+  background: #444;
+  cursor: not-allowed;
+}
+
+.game-container {
+  max-width: 600px;
+  margin: 4rem auto;
+  padding: 2rem;
+  background: #23272f;
+  border-radius: 12px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+}

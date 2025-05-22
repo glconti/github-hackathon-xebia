@@ -1,35 +1,45 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [name, setName] = useState('');
+  const [joined, setJoined] = useState(false);
+
+  const handleJoin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim()) {
+      setJoined(true);
+      // TODO: Call backend to join a game with the chosen name
+    }
+  };
+
+  if (!joined) {
+    return (
+      <div className="join-container">
+        <h1>Battleship Online</h1>
+        <form onSubmit={handleJoin} className="join-form">
+          <label htmlFor="name">Enter your name:</label>
+          <input
+            id="name"
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            required
+            autoFocus
+          />
+          <button type="submit" disabled={!name.trim()}>Join Game</button>
+        </form>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="game-container">
+      <h2>Welcome, {name}!</h2>
+      <p>Joining a game...</p>
+      {/* TODO: Show game board or waiting room here */}
+    </div>
+  );
 }
 
 export default App
