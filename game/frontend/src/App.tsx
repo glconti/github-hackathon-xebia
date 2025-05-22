@@ -39,6 +39,8 @@ function App() {
   const [placedShips, setPlacedShips] = useState<PlacedShip[]>([]);
   const [isHorizontal, setIsHorizontal] = useState(true);
   const [moves, setMoves] = useState<{ row: number; col: number }[]>([]);
+  const [isMyTurn, setIsMyTurn] = useState(false);
+  const [opponentMoves, setOpponentMoves] = useState<{ row: number; col: number }[]>([]);
   const connectionRef = useRef<HubConnection | null>(null);
 
   useEffect(() => {
@@ -59,6 +61,15 @@ function App() {
       connection.on('PlayerList', (playerNames: string[]) => {
         console.log('Received player list:', playerNames);
         setPlayers(playerNames.map(name => ({ name })));
+      });
+
+      // Listen for turn updates
+      connection.on('YourTurn', () => setIsMyTurn(true));
+      connection.on('OpponentTurn', () => setIsMyTurn(false));
+      // Listen for opponent move
+      connection.on('OpponentMove', (row: number, col: number) => {
+        setOpponentMoves(moves => [...moves, { row, col }]);
+        setIsMyTurn(true);
       });
 
       // Start connection
@@ -153,13 +164,15 @@ function App() {
   // Track if all ships are placed and moves
   const allShipsPlaced = placedShips.length === SHIPS.length;
 
-  // Handle making a move
+  // Send move to backend
   const handleMove = (row: number, col: number) => {
-    if (!allShipsPlaced) return; // Only allow moves after all ships are placed
-    // Prevent duplicate moves
+    if (!allShipsPlaced || !isMyTurn) return;
     if (moves.some(m => m.row === row && m.col === col)) return;
     setMoves([...moves, { row, col }]);
-    // TODO: Send move to backend here
+    setIsMyTurn(false);
+    if (connectionRef.current) {
+      connectionRef.current.invoke('MakeMove', row, col);
+    }
   };
 
   // Render battleship grid and ships to place
@@ -237,7 +250,7 @@ function App() {
 
   return (
     <div className="game-container">
-      <h2>{allShipsPlaced ? 'Battleship: Make Your Move' : 'Battleship: Place Your Ships'}</h2>
+      <h2>{allShipsPlaced ? (isMyTurn ? 'Your Turn: Make a Move' : "Opponent's Turn") : 'Battleship: Place Your Ships'}</h2>
       <div className="battleship-layout">
         <div className="battleship-grid">
           {Array.from({ length: GRID_SIZE }).map((_, row) => (
@@ -257,7 +270,8 @@ function App() {
                   }
                 }
                 // Show move marker if move was made
-                const move = moves.find(m => m.row === row && m.col === col);
+                const myMove = moves.find(m => m.row === row && m.col === col);
+                const oppMove = opponentMoves.find(m => m.row === row && m.col === col);
                 return (
                   <div
                     className={`battleship-cell${occupied ? ' occupied' : ''}${selectedShip ? ' placeable' : ''}${allShipsPlaced ? ' move-phase' : ''}`}
@@ -266,9 +280,9 @@ function App() {
                       if (!allShipsPlaced) handleCellClick(row, col);
                       else handleMove(row, col);
                     }}
-                    style={{ cursor: allShipsPlaced ? (!move ? 'crosshair' : 'not-allowed') : (selectedShip ? 'pointer' : 'default') }}
+                    style={{ cursor: allShipsPlaced && isMyTurn ? (!myMove ? 'crosshair' : 'not-allowed') : (selectedShip ? 'pointer' : 'default') }}
                   >
-                    {move ? <span className="move-marker">X</span> : shipSymbol}
+                    {myMove ? <span className="move-marker">X</span> : oppMove ? <span className="opponent-move-marker">O</span> : shipSymbol}
                   </div>
                 );
               })}
