@@ -192,14 +192,32 @@ function App() {
         <div className="battleship-grid">
           {Array.from({ length: GRID_SIZE }).map((_, row) => (
             <div className="battleship-row" key={row}>
-              {Array.from({ length: GRID_SIZE }).map((_, col) => (
-                <div
-                  className={`battleship-cell${isCellOccupied(row, col) ? ' occupied' : ''}${selectedShip ? ' placeable' : ''}`}
-                  key={col}
-                  onClick={() => handleCellClick(row, col)}
-                  style={{ cursor: selectedShip ? 'pointer' : 'default' }}
-                ></div>
-              ))}
+              {Array.from({ length: GRID_SIZE }).map((_, col) => {
+                const occupied = isCellOccupied(row, col);
+                // Find which ship (if any) occupies this cell
+                let shipSymbol = '';
+                if (occupied) {
+                  const ps = placedShips.find(ps => {
+                    const psPositions = Array.from({ length: ps.ship.size }, (_, i) =>
+                      ps.horizontal ? [ps.row, ps.col + i] : [ps.row + i, ps.col]
+                    );
+                    return psPositions.some(([pr, pc]) => pr === row && pc === col);
+                  });
+                  if (ps) {
+                    shipSymbol = '■';
+                  }
+                }
+                return (
+                  <div
+                    className={`battleship-cell${occupied ? ' occupied' : ''}${selectedShip ? ' placeable' : ''}`}
+                    key={col}
+                    onClick={() => handleCellClick(row, col)}
+                    style={{ cursor: selectedShip ? 'pointer' : 'default' }}
+                  >
+                    {shipSymbol}
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>
