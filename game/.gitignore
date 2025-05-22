@@ -23,6 +23,10 @@ obj/
 *.dotCover
 TestResult*/
 
+# Backend build artifacts
+backend/bin/
+backend/obj/
+
 # React
 node_modules/
 build/
