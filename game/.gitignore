@@ -28,6 +28,7 @@ backend/bin/
 backend/obj/
 backend/Properties/PublishProfiles/
 backend/Properties/ServiceDependencies/
+backend/wwwroot/
 
 # React
 node_modules/
