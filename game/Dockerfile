@@ -6,7 +6,7 @@ WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 # Install SignalR client for React
-RUN npm install @microsoft/signalr
+RUN npm install
 COPY frontend/ .
 RUN npm run build
 
